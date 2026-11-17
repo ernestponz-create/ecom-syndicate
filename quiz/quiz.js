@@ -147,8 +147,23 @@ const SOURCE_PAGE   = "quiz";
     if (/^yes, i'd like details/i.test(r)) return "Yes, I'd like to understand the details first";
     return "Not sure yet / not right now";
   }
+  var UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
+  function getUtms() {
+    var out = {}, qs = new URLSearchParams(window.location.search), stored = {};
+    try { stored = JSON.parse(sessionStorage.getItem("esy_utms") || "{}"); } catch (e) {}
+    UTM_KEYS.forEach(function (k) {
+      var v = (qs.get(k) || stored[k] || "").slice(0, 200);
+      if (v) out[k] = v;
+    });
+    try { sessionStorage.setItem("esy_utms", JSON.stringify(out)); } catch (e) {}
+    return out;
+  }
+  var UTMS = getUtms();
   function build(d) {
     return {
+      utm_source: UTMS.utm_source || "", utm_medium: UTMS.utm_medium || "",
+      utm_campaign: UTMS.utm_campaign || "", utm_content: UTMS.utm_content || "",
+      utm_term: UTMS.utm_term || "",
       name: d.name, email: d.email, phone: d.phone,
       situation: (answers.situation || "") + " \u2014 goal: " + (answers.goal || ""),
       readiness: mapReadiness(answers.readiness || ""),
