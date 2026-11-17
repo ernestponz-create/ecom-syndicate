@@ -1,5 +1,6 @@
 /* ===== CONFIG (edit these) ===================================== */
-const FORM_ENDPOINT = "https://formsubmit.co/ajax/ernestponz@gmail.com"; // FormSubmit AJAX endpoint: leads are emailed (first submission needs a one-time activation click in the inbox)
+const FORM_ENDPOINT = "https://jgujrubjdittbgjwzhwn.supabase.co/functions/v1/lead-intake"; // primary: CRM lead intake (Supabase edge function)
+const BACKUP_ENDPOINT = "https://formsubmit.co/ajax/ernestponz@gmail.com"; // backup: FormSubmit emails each lead (fire-and-forget; first submission needs a one-time activation click)
 const BOOKING_URL   = 'https://calendly.com/ernestponz/30min';                                    
 const CONTACT_EMAIL = 'ernestponz@gmail.com'; // shown in the privacy policy
 /* =============================================================== */
@@ -52,16 +53,35 @@ const CONTACT_EMAIL = 'ernestponz@gmail.com'; // shown in the privacy policy
     d.delete("website");
     var payload = Object.fromEntries(d); delete payload.consent;
     payload.consent = "Agreed to be contacted";
-    payload._subject = "New lead - The Ecom Syndicate"; payload._template = "table"; payload._captcha = "false";
-    payload._replyto = payload.email; payload.source_page = location.href;
-    if (/YOUR_FORM_ID/.test(FORM_ENDPOINT)) { // endpoint not configured yet: preview mode
-      console.warn("FORM_ENDPOINT is still a placeholder. Submission not sent:", payload);
-      showThanks(); return;
+    payload.source_page = location.href;
+    payload.website = "";
+    var backup = Object.assign({}, payload, {
+      consent: "Agreed to be contacted", _subject: "New lead - The Ecom Syndicate",
+      _template: "table", _captcha: "false", _replyto: payload.email
+    });
+    delete backup.website;
+
+    function post(url, body) {
+      return fetch(url, { method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "application/json", Accept: "application/json" } })
+        .then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (j) {
+            if (!r.ok || j.success === "false" || j.success === false) throw new Error(j.message || r.status);
+            return j;
+          });
+        });
     }
+
     btn.disabled = true; btn.textContent = "Sending…";
-    fetch(FORM_ENDPOINT, { method: "POST", body: JSON.stringify(payload), headers: { "Content-Type": "application/json", Accept: "application/json" } })
-      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok || j.success === "false" || j.success === false) throw new Error(j.message || r.status); showThanks(); }); })
-      .catch(function () { err.textContent = "Something went wrong. Please try again."; })
-      .finally(function () { btn.disabled = false; btn.textContent = "Book a free call"; });
+    var primary = post(FORM_ENDPOINT, payload).then(function () { return true; }, function (e) { console.warn("lead-intake failed", e); return false; });
+    var secondary = post(BACKUP_ENDPOINT, backup).then(function () { return true; }, function (e) { console.warn("backup email failed", e); return false; });
+    // Primary (CRM) decides success; if it fails, wait for the backup so a saved-by-email lead still counts.
+    primary.then(function (ok) {
+      if (ok) return true;
+      return secondary;
+    }).then(function (ok) {
+      if (ok) showThanks(); else err.textContent = "Something went wrong. Please try again.";
+    }).then(function () {
+      btn.disabled = false; btn.textContent = "Book a free call";
+    });
   });
 })();
