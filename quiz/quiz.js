@@ -32,8 +32,78 @@ const SOURCE_PAGE   = "quiz";
   var bar = $("bar"), fill = $("barfill"), back = $("back"), app = $("app");
   $("yr").textContent = new Date().getFullYear();
 
+  /* ---- analytics (PostHog). Every call is a safe no-op if PostHog is not loaded. ---- */
+  function track(name, props) {
+    try { if (window.posthog && window.posthog.capture) window.posthog.capture(name, props || {}); } catch (e) {}
+  }
+  function stepInfo(name) {
+    if (name === "intro") return { step: 0, question: "intro" };
+    if (name === "q") return { step: qi + 1, question: QUESTIONS[qi].text, question_key: QUESTIONS[qi].key };
+    if (name === "contact") return { step: QUESTIONS.length + 1, question: "contact form" };
+    return { step: QUESTIONS.length + 2, question: "calendly booking" };
+  }
+  var seen = {}, stepStart = Date.now(), curStep = null, scrollHit = {};
+  var campaign = {};
+  (function () { // UTM + click ids as super properties (attached to every event)
+    try {
+      var qs = new URLSearchParams(location.search), keys = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id", "fbclid", "gclid", "ttclid", "msclkid"];
+      keys.forEach(function (k) { var v = qs.get(k); if (v) campaign[k] = v; });
+      var sp = { source_page: SOURCE_PAGE };
+      Object.keys(campaign).forEach(function (k) { sp[k] = campaign[k]; });
+      if (window.posthog && posthog.register) posthog.register(sp);
+    } catch (e) {}
+  })();
+  function sendStepTime(reason) { // time spent on the step being left / abandoned
+    if (!curStep) return;
+    var secs = Math.round((Date.now() - stepStart) / 100) / 10;
+    if (secs > 0) track("quiz_step_time", { step: curStep.step, question: curStep.question, seconds: secs, reason: reason });
+    stepStart = Date.now();
+  }
+  function scrollPct() {
+    var d = document.documentElement, max = d.scrollHeight - d.clientHeight;
+    return max <= 0 ? 100 : Math.round((window.pageYOffset || d.scrollTop) / max * 100);
+  }
+  var scrollTimer = null;
+  window.addEventListener("scroll", function () {
+    if (scrollTimer) return;
+    scrollTimer = setTimeout(function () {
+      scrollTimer = null;
+      var p = scrollPct(), k = curStep ? curStep.step : -1;
+      [25, 50, 75, 100].forEach(function (t) {
+        var key = k + ":" + t;
+        if (p >= t && !scrollHit[key] && document.documentElement.scrollHeight > document.documentElement.clientHeight) {
+          scrollHit[key] = 1; track("quiz_scroll_depth", { depth_percent: t, step: k, question: curStep && curStep.question });
+        }
+      });
+    }, 150);
+  }, { passive: true });
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") sendStepTime("page_hidden"); else stepStart = Date.now(); });
+  window.addEventListener("pagehide", function () { sendStepTime("page_hide"); });
+  function hashEmail(email) { // SHA-256 hex of the lowercased email; the raw email is never sent
+    try {
+      if (!(window.crypto && crypto.subtle && window.TextEncoder)) return Promise.resolve(null);
+      return crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(email).trim().toLowerCase())).then(function (buf) {
+        return Array.prototype.map.call(new Uint8Array(buf), function (b) { return ("0" + b.toString(16)).slice(-2); }).join("");
+      }).catch(function () { return null; });
+    } catch (e) { return Promise.resolve(null); }
+  }
+  /* Calendly booking: Calendly posts {event:"calendly.event_scheduled"} from its iframe */
+  window.addEventListener("message", function (e) {
+    try {
+      if (!/^https:\/\/([a-z0-9-]+\.)*calendly\.com$/.test(e.origin || "")) return;
+      if (e.data && e.data.event === "calendly.event_scheduled") track("calendly_booked", { step: stepInfo("final").step, readiness: answers.readiness || "" });
+    } catch (x) {}
+  });
+
   function show(name) {
+    sendStepTime("step_change");
     view = name;
+    curStep = stepInfo(name); stepStart = Date.now();
+    var sk = curStep.step + ":" + (curStep.question_key || "");
+    var vp = { step: curStep.step, question: curStep.question, is_revisit: !!seen[sk] };
+    if (curStep.question_key) vp.question_key = curStep.question_key;
+    seen[sk] = 1;
+    track("quiz_step_viewed", vp);
     Object.keys(steps).forEach(function (k) { steps[k].classList.toggle("on", k === name); });
     var units = QUESTIONS.length + 2; // questions + contact + final
     var done = name === "intro" ? 0 : name === "q" ? qi + 1 : name === "contact" ? QUESTIONS.length + 1 : units;
@@ -53,6 +123,7 @@ const SOURCE_PAGE   = "quiz";
       b.type = "button"; b.className = "opt" + (answers[q.key] === o ? " sel" : ""); b.textContent = o;
       b.addEventListener("click", function () {
         answers[q.key] = o; b.classList.add("sel");
+        track("quiz_answer_selected", { step: qi + 1, question: q.text, question_key: q.key, answer: o, answer_index: q.opts.indexOf(o) });
         setTimeout(function () { next(); }, 160);
       });
       box.appendChild(b);
@@ -60,10 +131,11 @@ const SOURCE_PAGE   = "quiz";
     show("q");
   }
   function next() {
-    if (qi < QUESTIONS.length - 1) { qi++; renderQ(); } else { show("contact"); var f = document.querySelector("#lead-form [name=name]"); if (f && !lead.name) f.focus({ preventScroll: true }); }
+    if (qi < QUESTIONS.length - 1) { qi++; renderQ(); } else { var done = {}; QUESTIONS.forEach(function (qq) { done[qq.key] = answers[qq.key] || null; }); done.total_questions = QUESTIONS.length; track("quiz_completed", done); show("contact"); var f = document.querySelector("#lead-form [name=name]"); if (f && !lead.name) f.focus({ preventScroll: true }); }
   }
-  $("start").addEventListener("click", function () { qi = 0; renderQ(); });
+  $("start").addEventListener("click", function () { track("quiz_started", { step: 0 }); qi = 0; renderQ(); });
   back.addEventListener("click", function () {
+    track("quiz_back", { from_view: view, from_step: curStep ? curStep.step : null, from_question: curStep ? curStep.question : null });
     if (view === "contact") { qi = QUESTIONS.length - 1; renderQ(); }
     else if (view === "q") { if (qi > 0) { qi--; renderQ(); } else { show("intro"); } }
   });
@@ -98,24 +170,37 @@ const SOURCE_PAGE   = "quiz";
     if (d.phone.replace(/\D/g, "").length < 10) bad.push("phone");
     if (bad.length) {
       bad.forEach(function (n) { form[n].classList.add("bad"); });
+      track("lead_form_validation_error", { fields: bad }); // field names only, never values
       form[bad[0]].focus({ preventScroll: true });
       err.textContent = bad[0] === "name" ? "Please enter your full name." : bad[0] === "email" ? "Please enter a valid email." : "Please enter a valid phone number (10 digits).";
       return;
     }
-    if (!form.consent.checked) { err.textContent = "Please tick the consent box to continue."; return; }
+    if (!form.consent.checked) { track("lead_form_validation_error", { fields: ["consent"] }); err.textContent = "Please tick the consent box to continue."; return; }
     lead = d;
     if (form.website.value) { showFinal(); return; } // honeypot: bots get a fake success, nothing is sent
     send.disabled = true; send.textContent = "Sending\u2026";
     fetch(LEAD_ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(build(d)) })
-      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok || j.success !== true) throw new Error(j.message || r.status); }); })
-      .then(function () { /* Meta Pixel: fbq('track','Lead') goes here once the pixel is installed */ showFinal(); })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok || j.success !== true) throw new Error(j.message || r.status); return j; }); })
+      .then(function (j) { /* Meta Pixel: fbq('track','Lead') goes here once the pixel is installed */ afterLead(d, j); showFinal(); })
       .catch(function (ex) {
         console.warn("lead-intake failed", ex); attempts++;
+        track("lead_form_failed", { attempt: attempts });
         if (attempts >= 2) { showFinal(); return; } // don't strand the visitor: let them book anyway
         err.textContent = "Something went wrong. Please tap the button to try again.";
         send.disabled = false; send.textContent = "Try again";
       });
   });
+
+  /* identify with lead id (if the API returns one) or hashed email, then record the submit (no personal data in props) */
+  function afterLead(d, j) {
+    var id = j && (j.lead_id || j.contact_id || j.id);
+    var fire = function () { track("lead_form_submitted", { attempt: attempts + 1, source_page: SOURCE_PAGE, id_type: id ? "lead_id" : "hashed_email" }); };
+    var ident = function (distinct) {
+      try { if (distinct && window.posthog && posthog.identify) posthog.identify(String(distinct)); } catch (e) {}
+      fire();
+    };
+    if (id) ident("lead_" + id); else hashEmail(d.email).then(function (h) { ident(h ? "sha256_" + h : null); });
+  }
 
   /* ---- final: Calendly ---- */
   function showFinal() {
@@ -137,6 +222,10 @@ const SOURCE_PAGE   = "quiz";
       document.body.appendChild(s);
     }
   }
+  /* initial view of the intro step (the pageview itself is captured by PostHog) */
+  curStep = stepInfo("intro"); stepStart = Date.now(); seen["0:"] = 1;
+  track("quiz_step_viewed", { step: 0, question: "intro", is_revisit: false });
+
   function first(n) { return (n || "").split(/\s+/)[0] || "there"; }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
 })();
