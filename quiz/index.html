@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The Ecom Syndicate | Quick Quiz</title>
+<meta name="description" content="Answer 4 quick questions and book a free strategy call. Your ecommerce business, managed A to Z by one experienced team.">
+<meta name="theme-color" content="#080e20">
+<meta name="robots" content="noindex">
+<link rel="preload" href="assets/oswald.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="preload" as="image" href="assets/team-photo.jpg">
+<link rel="stylesheet" href="style.css">
+<!-- META PIXEL PLACEHOLDER: paste the Meta Pixel base code here once the pixel exists.
+     Suggested events: PageView (automatic), Lead (fire in quiz.js after a successful lead-intake response),
+     Schedule (optional, on Calendly booking). Do NOT add the pixel before Ernest approves. -->
+</head>
+<body>
+<div class="app" id="app">
+  <div class="top">
+    <div class="wordmark">The Ecom Syndicate</div>
+    <button class="back" id="back" type="button" aria-label="Go back">&larr; Back</button>
+  </div>
+  <div class="bar" id="bar" aria-hidden="true"><i id="barfill"></i></div>
+
+  <main>
+    <!-- Step 0: intro -->
+    <section class="step on" id="s0" data-step="0">
+      <div class="hero-img"><img src="assets/team-photo.jpg" width="1024" height="765" alt="The Ecom Syndicate team" fetchpriority="high"></div>
+      <h1><span>One team.</span><span class="gold">Everything handled.</span></h1>
+      <p class="sub">A done-for-you ecommerce store, built and scaled by one experienced team.</p>
+      <div class="chips"><span>Exclusive manufacturers</span><span>Off-market pricing</span><span>10+ yr ads team</span><span>Logistics &amp; chargeback protection</span></div>
+      <div class="cta"><button class="btn" id="start" type="button">Start (30 sec)</button><div class="note">4 quick questions. No obligation.</div></div>
+    </section>
+
+    <!-- Steps 1-4: questions (rendered by quiz.js) -->
+    <section class="step" id="sq" data-step="q">
+      <div class="eyebrow" id="qcount"></div>
+      <h2 class="q" id="qtext"></h2>
+      <div class="opts" id="opts"></div>
+    </section>
+
+    <!-- Step 5: contact -->
+    <section class="step" id="sc" data-step="contact">
+      <div class="eyebrow">Last step</div>
+      <h2 class="q">Where should we send your time slots?</h2>
+      <form id="lead-form" novalidate>
+        <label>Full name<input type="text" name="name" autocomplete="name" placeholder="Jane Smith" required></label>
+        <label>Email<input type="email" name="email" autocomplete="email" inputmode="email" placeholder="you@example.com" required></label>
+        <label>Phone<input type="tel" name="phone" autocomplete="tel" inputmode="tel" placeholder="(555) 123-4567" required></label>
+        <div class="hp" aria-hidden="true"><label>Leave blank<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+        <label class="consent"><input type="checkbox" name="consent" required><span>I agree to be contacted by The Ecom Syndicate by phone, text or email. Message and data rates may apply. See our <a href="https://ernestponz-create.github.io/ecom-syndicate/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>
+        <div class="err" id="err" role="alert"></div>
+        <button class="btn" id="send" type="submit">See available times</button>
+      </form>
+    </section>
+
+    <!-- Step 6: Calendly -->
+    <section class="step" id="s5" data-step="final">
+      <div class="eyebrow" id="fe">Free strategy call</div>
+      <h2 id="ft"></h2>
+      <p class="sub" id="fs"></p>
+      <div class="cal" id="cal"></div>
+    </section>
+  </main>
+
+  <footer>&copy; <span id="yr">2026</span> The Ecom Syndicate &middot; <a href="https://ernestponz-create.github.io/ecom-syndicate/privacy.html" target="_blank" rel="noopener">Privacy Policy</a> &middot; Results vary and are not guaranteed. Not affiliated with or endorsed by Meta.</footer>
+</div>
+<script src="quiz.js"></script>
+</body>
+</html>
