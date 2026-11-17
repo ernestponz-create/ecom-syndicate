@@ -10,9 +10,18 @@
 <link rel="preload" href="assets/oswald.ttf" as="font" type="font/ttf" crossorigin>
 <link rel="preload" as="image" href="assets/team-photo.jpg">
 <link rel="stylesheet" href="style.css">
-<!-- META PIXEL PLACEHOLDER: paste the Meta Pixel base code here once the pixel exists.
-     Suggested events: PageView (automatic), Lead (fire in quiz.js after a successful lead-intake response),
-     Schedule (optional, on Calendly booking). Do NOT add the pixel before Ernest approves. -->
+<!-- Meta Pixel (Ecom Syndicate Quiz Pixel 3419398771565032): PageView here, Lead fired in quiz.js after a successful lead-intake response -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '3419398771565032');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=3419398771565032&ev=PageView&noscript=1"></noscript>
+<!-- End Meta Pixel -->
 <!-- POSTHOG ANALYTICS: placeholders are filled by /workspace/posthog/apply.sh KEY HOST.
      While they are unreplaced, PostHog is NOT loaded and the quiz runs normally with no tracking. -->
 <script>

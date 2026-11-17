@@ -196,7 +196,7 @@ const SOURCE_PAGE   = "quiz";
     send.disabled = true; send.textContent = "Sending\u2026";
     fetch(LEAD_ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(build(d)) })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok || j.success !== true) throw new Error(j.message || r.status); return j; }); })
-      .then(function (j) { /* Meta Pixel: fbq('track','Lead') goes here once the pixel is installed */ afterLead(d, j); showFinal(); })
+      .then(function (j) { try { if (window.fbq) fbq('track', 'Lead', { content_name: 'quiz_lead' }); } catch (e) {} afterLead(d, j); showFinal(); })
       .catch(function (ex) {
         console.warn("lead-intake failed", ex); attempts++;
         track("lead_form_failed", { attempt: attempts });
