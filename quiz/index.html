@@ -56,17 +56,11 @@ fbq('track', 'PageView');
   <div class="bar" id="bar" aria-hidden="true"><i id="barfill"></i></div>
 
   <main>
-    <!-- Step 0: intro -->
-    <section class="step on" id="s0" data-step="0">
-      <div class="hero-img"><img src="assets/team-photo.jpg" width="1024" height="765" alt="The Ecom Syndicate team" fetchpriority="high"></div>
-      <h1><span>One team.</span><span class="gold">Everything handled.</span></h1>
-      <p class="sub">A done-for-you ecommerce store, built and scaled by one experienced team.</p>
-      <div class="chips"><span>Exclusive manufacturers</span><span>Off-market pricing</span><span>10+ yr ads team</span><span>Logistics &amp; chargeback protection</span></div>
-      <div class="cta"><button class="btn" id="start" type="button">Start (30 sec)</button><div class="note">4 quick questions. No obligation.</div></div>
-    </section>
-
+    <!-- Intro screen removed 2026-11-25: the quiz now opens on question 1.
+         The intro headline is reused as a short heading above Q1. -->
     <!-- Steps 1-4: questions (rendered by quiz.js) -->
-    <section class="step" id="sq" data-step="q">
+    <section class="step on" id="sq" data-step="q">
+      <h1 class="qhead"><span>One team.</span> <span class="gold">Everything handled.</span></h1>
       <div class="eyebrow" id="qcount"></div>
       <h2 class="q" id="qtext"></h2>
       <div class="opts" id="opts"></div>

@@ -38,6 +38,8 @@ h1,h2{font-family:Oswald,Impact,sans-serif;text-transform:uppercase;line-height:
 .btn[disabled]{opacity:.6;cursor:wait;transform:none}
 .cta{margin-top:clamp(14px,2.6dvh,24px)}
 .note{margin-top:8px;text-align:center;font-size:12px;color:var(--mute)}
+/* short headline above Q1 (reused intro headline; intro screen removed 2026-11-25) */
+.qhead{font-family:Oswald,Impact,sans-serif;text-transform:uppercase;font-weight:700;letter-spacing:.01em;font-size:clamp(18px,2.6dvh + .6vw,26px);line-height:1.1;margin:0 0 clamp(8px,1.4dvh,14px)}
 /* questions */
 .q{font-size:clamp(28px,4.4dvh + 1vw,42px);margin-bottom:clamp(12px,2.2dvh,20px)}
 .opts{display:grid;gap:clamp(8px,1.4dvh,12px)}

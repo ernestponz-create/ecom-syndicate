@@ -25,10 +25,10 @@ const SOURCE_PAGE   = "quiz";
       "Yes, I'd like details first",
       "Not yet" ] }
   ];
-  var answers = {}, lead = {}, qi = -1, view = "intro", attempts = 0;
+  var answers = {}, lead = {}, qi = -1, view = "q", attempts = 0;
 
   var $ = function (id) { return document.getElementById(id); };
-  var steps = { intro: $("s0"), q: $("sq"), contact: $("sc"), final: $("s5") };
+  var steps = { q: $("sq"), contact: $("sc"), final: $("s5") };
   var bar = $("bar"), fill = $("barfill"), back = $("back"), app = $("app");
   $("yr").textContent = new Date().getFullYear();
 
@@ -108,8 +108,8 @@ const SOURCE_PAGE   = "quiz";
     var units = QUESTIONS.length + 2; // questions + contact + final
     var done = name === "intro" ? 0 : name === "q" ? qi + 1 : name === "contact" ? QUESTIONS.length + 1 : units;
     fill.style.width = Math.round(done / units * 100) + "%";
-    bar.classList.toggle("on", name !== "intro");
-    back.classList.toggle("on", name === "q" || name === "contact");
+    bar.classList.toggle("on", true);
+    back.classList.toggle("on", (name === "q" && qi > 0) || name === "contact");
     app.classList.toggle("wide", name === "final");
   }
 
@@ -133,11 +133,10 @@ const SOURCE_PAGE   = "quiz";
   function next() {
     if (qi < QUESTIONS.length - 1) { qi++; renderQ(); } else { var done = {}; QUESTIONS.forEach(function (qq) { done[qq.key] = answers[qq.key] || null; }); done.total_questions = QUESTIONS.length; track("quiz_completed", done); show("contact"); var f = document.querySelector("#lead-form [name=name]"); if (f && !lead.name) f.focus({ preventScroll: true }); }
   }
-  $("start").addEventListener("click", function () { track("quiz_started", { step: 0 }); qi = 0; renderQ(); });
   back.addEventListener("click", function () {
     track("quiz_back", { from_view: view, from_step: curStep ? curStep.step : null, from_question: curStep ? curStep.question : null });
     if (view === "contact") { qi = QUESTIONS.length - 1; renderQ(); }
-    else if (view === "q") { if (qi > 0) { qi--; renderQ(); } else { show("intro"); } }
+    else if (view === "q") { if (qi > 0) { qi--; renderQ(); } }
   });
 
   /* ---- contact + submit ---- */
@@ -237,9 +236,12 @@ const SOURCE_PAGE   = "quiz";
       document.body.appendChild(s);
     }
   }
-  /* initial view of the intro step (the pageview itself is captured by PostHog) */
-  curStep = stepInfo("intro"); stepStart = Date.now(); seen["0:"] = 1;
-  track("quiz_step_viewed", { step: 0, question: "intro", is_revisit: false });
+  /* Opens on question 1 (intro screen removed 2026-11-25).
+     quiz_started now fires when Q1 is shown, not when a Start button is tapped.
+     Step numbers stay: Q1–Q4 = 1–4, contact = 5, Calendly = 6. */
+  qi = 0;
+  track("quiz_started", { step: 1, question: QUESTIONS[0].text, question_key: QUESTIONS[0].key });
+  renderQ();
 
   function first(n) { return (n || "").split(/\s+/)[0] || "there"; }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
