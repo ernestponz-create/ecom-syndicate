@@ -61,6 +61,10 @@
         first_touch: ls("esy_first_touch") || null,
         last_touch: ls("esy_last_touch") || null
       };
+      // QA only: ?esy_test_event_code=TEST123 forwards a Meta test code. The server honours it
+      // only for @example.com test leads; real leads are never affected.
+      var tc = (qs.get("esy_test_event_code") || "").slice(0, 40);
+      if (/^TEST[A-Za-z0-9]+$/.test(tc)) out.test_event_code = tc;
       ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"].forEach(function (k) { out[k] = cur[k] || ""; });
       return out;
     },
