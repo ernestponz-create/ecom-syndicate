@@ -158,8 +158,12 @@ const SOURCE_PAGE   = "quiz";
     return out;
   }
   var UTMS = getUtms();
+  var EVENT_ID = null; // one id per lead, shared by the browser pixel and the server (CAPI) for dedup
   function build(d) {
-    return {
+    if (!EVENT_ID) EVENT_ID = window.ESYAttr ? ESYAttr.newEventId() : "lead." + Date.now() + "." + Math.random().toString(36).slice(2);
+    var attr = {};
+    try { if (window.ESYAttr) attr = ESYAttr.payload(EVENT_ID); else attr = { event_id: EVENT_ID }; } catch (e) { attr = { event_id: EVENT_ID }; }
+    var body = {
       utm_source: UTMS.utm_source || "", utm_medium: UTMS.utm_medium || "",
       utm_campaign: UTMS.utm_campaign || "", utm_content: UTMS.utm_content || "",
       utm_term: UTMS.utm_term || "",
@@ -171,6 +175,10 @@ const SOURCE_PAGE   = "quiz";
       source_page: SOURCE_PAGE,
       website: ""
     };
+    Object.keys(attr).forEach(function (k) { if (attr[k] !== undefined && attr[k] !== "" && attr[k] !== null) body[k] = attr[k]; });
+    // UTMs = this visit's touch as one set (never mix keys from two different clicks).
+    if (window.ESYAttr && attr.page_url) UTM_KEYS.forEach(function (k) { body[k] = attr[k] || ""; });
+    return body;
   }
   form.addEventListener("submit", function (e) {
     e.preventDefault(); err.textContent = "";
@@ -195,7 +203,7 @@ const SOURCE_PAGE   = "quiz";
     send.disabled = true; send.textContent = "Sending\u2026";
     fetch(LEAD_ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(build(d)) })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok || j.success !== true) throw new Error(j.message || r.status); return j; }); })
-      .then(function (j) { try { if (window.fbq) fbq('track', 'Lead', { content_name: 'quiz_lead' }); } catch (e) {} afterLead(d, j); showFinal(); })
+      .then(function (j) { try { if (window.fbq) fbq('track', 'Lead', { content_name: 'quiz_lead' }, { eventID: EVENT_ID }); } catch (e) {} afterLead(d, j); showFinal(); })
       .catch(function (ex) {
         console.warn("lead-intake failed", ex); attempts++;
         track("lead_form_failed", { attempt: attempts });
@@ -225,7 +233,7 @@ const SOURCE_PAGE   = "quiz";
       : "Choose a time for your free strategy call with our team.";
     $("fe").textContent = notYet ? "Free call" : "You're in";
     show("final");
-    var url = CALENDLY_URL + "?hide_gdpr_banner=1&name=" + encodeURIComponent(lead.name || "") + "&email=" + encodeURIComponent(lead.email || "");
+    var url = CALENDLY_URL + "?hide_gdpr_banner=1&name=" + encodeURIComponent(lead.name || "") + "&email=" + encodeURIComponent(lead.email || "") + (window.ESYAttr ? ESYAttr.calendlyQuery() : "");
     var cal = $("cal"); cal.innerHTML = "";
     var div = document.createElement("div"); div.className = "calendly-inline-widget"; div.setAttribute("data-url", url);
     div.style.cssText = "min-width:300px;height:100%;"; cal.appendChild(div);
